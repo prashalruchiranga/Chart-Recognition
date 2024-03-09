@@ -1,0 +1,6 @@
+/env
+/DeepRuleDataset
+.DS_Store
+.ipynb_checkpoints/chart classification-checkpoint.ipynb
+.ipynb_checkpoints/chart recognition-checkpoint.ipynb
+/CBSLDataset
