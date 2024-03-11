@@ -4,3 +4,4 @@
 .ipynb_checkpoints/chart classification-checkpoint.ipynb
 .ipynb_checkpoints/chart recognition-checkpoint.ipynb
 /CBSLDataset
+/__pycache__
