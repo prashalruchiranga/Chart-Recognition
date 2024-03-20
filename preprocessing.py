@@ -1,4 +1,7 @@
 import json
+from copy import deepcopy
+import operator
+import cv2
 
 def clean(file):
     '''
@@ -24,3 +27,20 @@ def clean(file):
     images = [dic for dic in data['images'] if dic['id'] not in missing_annotations]
 
     return {'licenses': data['licenses'], 'images': images, 'annotations': annotations, 'categories': data['categories']}
+
+
+def transform(annotation, input_shape, output_shape):
+    deep_copy = deepcopy(annotation)
+    a, b = input_shape
+    c, d = output_shape
+    sx = d / b
+    sy = c / a
+    for dic in deep_copy:
+        dic['bbox'] = list(map(operator.mul, dic['bbox'], [sy, sx, sy, sx]))
+    return deep_copy
+
+
+def resize_image(file, new_shape):
+    rgb_img = cv2.cvtColor(cv2.imread(file), cv2.COLOR_BGR2RGB) 
+    return cv2.resize(rgb_img, new_shape) 
+
