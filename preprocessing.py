@@ -29,18 +29,30 @@ def clean(file):
     return {'licenses': data['licenses'], 'images': images, 'annotations': annotations, 'categories': data['categories']}
 
 
-def transform(annotation, input_shape, output_shape):
+def scale(annotation, input_shape, output_shape):
     deep_copy = deepcopy(annotation)
     a, b = input_shape
     c, d = output_shape
     sx = d / b
     sy = c / a
     for dic in deep_copy:
+        x0, y0, width, height = dic['bbox']
+        #dic['bbox'] = list(map(operator.add, dic['bbox'], [0, 0, x0, y0]))
         dic['bbox'] = list(map(operator.mul, dic['bbox'], [sy, sx, sy, sx]))
+        #dic['bbox'] = [sy*x0, sx*y0, sy*(x0+width), sx*(y0+height)]
+        #dic['bbox'] = [sy*x0, sx*y0, sy*width, sx*height]
     return deep_copy
 
 
 def resize_image(file, new_shape):
     rgb_img = cv2.cvtColor(cv2.imread(file), cv2.COLOR_BGR2RGB) 
     return cv2.resize(rgb_img, new_shape) 
+
+
+def transform(annotation, input_shape, output_shape):
+    scaled_annotation = scale(annotation, input_shape, output_shape)
+    for dic in scaled_annotation:
+        x0, y0, width, height = dic['bbox']
+        dic['bbox'] = [x0, y0, x0+width, y0+height]
+    return scaled_annotation
 
