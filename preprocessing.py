@@ -136,17 +136,22 @@ def generate_2d_guassian(height, width, y0, x0, sigma=1, scale=12):
     return heatmap
 
 
-def make_heatmaps(keypoint_x, keypoint_y):
+def make_heatmaps(keypoint_tl, keypoint_br):
     # Define SCALE as heatmap.shape[0] / image.shape[0] 
     # SCALE = 64 / 256
-    SCALE = tf.cast(0.25, dtype=tf.float32)
-    x = tf.cast(tf.math.round(keypoint_x * SCALE), dtype=tf.int32) 
-    y = tf.cast(tf.math.round(keypoint_y * SCALE), dtype=tf.int32) 
-    count = len(x)
-    heatmap_array = tf.TensorArray(tf.float32, count)
-    for i in range(count):
-        gaussian = generate_2d_guassian(64, 64, y[i], x[i])
-        heatmap_array = heatmap_array.write(i, gaussian)
-    heatmaps = heatmap_array.stack()
-    heatmaps = tf.transpose(heatmaps, perm=[1, 2, 0]) # change to (64, 64, 16)
-    return heatmaps
+    #SCALE = tf.cast(0.25, dtype=tf.float32)
+    tl = tf.cast(tf.math.round(keypoint_tl), dtype=tf.int32) 
+    br = tf.cast(tf.math.round(keypoint_br), dtype=tf.int32) 
+    count = len(tl) 
+    heatmap_array_tl = tf.TensorArray(tf.float32, count)
+    heatmap_array_br = tf.TensorArray(tf.float32, count)
+    for i in range(0, count, 2):
+        gaussian = generate_2d_guassian(256, 256, tl[i+1], tl[i])
+        heatmap_array_tl = heatmap_array_tl.write(i, gaussian)
+        gaussian = generate_2d_guassian(256, 256, br[i+1], br[i])
+        heatmap_array_br = heatmap_array_br.write(i, gaussian)
+    tl_heatmaps = tf.math.reduce_sum(heatmap_array_tl.stack(), axis=0)
+    br_heatmaps = tf.math.reduce_sum(heatmap_array_br.stack(), axis=0)
+    heatmap = tf.stack([tl_heatmaps, br_heatmaps], axis=2)
+    return heatmap
+
