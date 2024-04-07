@@ -59,17 +59,18 @@ def LinearLayer(inputs, filters):
     return x
 
 
-def StackedHourglassNetwork(input_shape=(256, 256, 3), num_stack=4, num_residual=1, num_heatmap=16):
+def StackedHourglassNetwork(input_shape=(256, 256, 3), num_stack=4, num_residual=1, num_heatmap=2):
     inputs = Input(shape=input_shape)
     # initial processing of the image
-    x = Conv2D(filters=64, kernel_size=7, strides=2, padding='same', kernel_initializer='he_normal')(inputs)
+    
+    x = Conv2D(filters=64, kernel_size=7, strides=1, padding='same', kernel_initializer='he_normal')(inputs)
     x = BatchNormalization(momentum=0.9)(x)
     x = ReLU()(x)
     x = BottleneckBlock(x, 128, downsample=True)
-    x = MaxPool2D(pool_size=2, strides=2)(x)
+    #x = MaxPool2D(pool_size=2, strides=2)(x)
     x = BottleneckBlock(x, 128, downsample=False)
     x = BottleneckBlock(x, 256, downsample=True)
-
+    
     ys = []
     for i in range(num_stack):
         x = HourglassModule(x, order=4, filters=256, num_residual=num_residual)
