@@ -4,6 +4,8 @@ import operator
 import cv2
 import tensorflow as tf
 import numpy as np
+from itertools import chain
+import os
 
 def clean(file):
     '''
@@ -154,4 +156,36 @@ def make_heatmaps(keypoint_tl, keypoint_br):
     br_heatmaps = tf.math.reduce_sum(heatmap_array_br.stack(), axis=0)
     heatmap = tf.stack([tl_heatmaps, br_heatmaps], axis=2)
     return heatmap
+
+
+def label_generator(annotations, batch_size):
+    num_samples = len(annotations)
+    indices = np.arange(num_samples)
+    keypoints_tl = [list(chain(*[dic['bbox'][0:2] for dic in annotation])) for annotation in annotations]
+    keypoints_br = [list(chain(*[dic['bbox'][2:4] for dic in annotation])) for annotation in annotations]
+    for start_idx in range(0, num_samples, batch_size):
+        end_idx = min(start_idx + batch_size, num_samples)
+        batch_keypoints_tl = keypoints_tl[start_idx:end_idx]
+        batch_keypoints_br = keypoints_br[start_idx:end_idx]
+        batch_labels = tf.stack(list(map(make_heatmaps, batch_keypoints_tl, batch_keypoints_br)))
+        yield tf.stack(batch_labels)
+
+
+def generator(file_list, heatmaps, batch_size, output_shape, file_path):
+    num_samples = len(file_list)
+    indices = np.arange(num_samples)
+    iteration = 0
+    for start_idx in range(0, num_samples, batch_size):
+        end_idx = min(start_idx + batch_size, num_samples)
+        batch_indices = indices[start_idx:end_idx]
+        batch_images = []
+        for idx in batch_indices:
+            file_name = file_list[idx]['file_name']
+            img = resize_image(os.path.join(file_path, file_name), output_shape)
+            batch_images.append(img)
+
+        batch_labels = np.load(heatmaps[iteration])
+        iteration += 1
+        yield (tf.stack(batch_images), tf.convert_to_tensor(batch_labels))
+
 
