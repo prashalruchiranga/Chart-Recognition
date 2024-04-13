@@ -16,3 +16,15 @@ def annotshow(image, annotation, radius=5, tl_color=(255, 0, 0), br_color=(0, 0,
     plt.show()
 
 
+def delete_contents(directory):
+    contents = os.listdir(directory)
+    if len(contents) == 0:
+        print(f'The {directory} is already empty')
+        return
+    print(f'Deleting the contents in the {directory}')
+    for file in contents:
+        path = os.path.join(directory, file)
+        os.remove(path)
+    return
+
+
