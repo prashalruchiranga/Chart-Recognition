@@ -184,7 +184,7 @@ def generator(file_list, heatmaps, batch_size, output_shape, file_path):
             img = resize_image(os.path.join(file_path, file_name), output_shape)
             batch_images.append(img)
 
-        batch_labels = np.load(heatmaps[iteration])
+        batch_labels = np.load(heatmaps[iteration])['batch']
         iteration += 1
         yield (tf.stack(batch_images), tf.convert_to_tensor(batch_labels))
 
