@@ -190,3 +190,19 @@ def generator(file_list, heatmaps, batch_size, output_shape, file_path):
             yield (tf.stack(batch_images), tf.convert_to_tensor(batch_labels))
 
 
+def validation_data_generator(file_list, heatmaps, batch_size, output_shape, file_path):
+    num_samples = len(file_list)
+    indices = np.arange(num_samples)
+    iteration = 0
+    for start_idx in range(0, num_samples, batch_size):
+        end_idx = min(start_idx + batch_size, num_samples)
+        batch_indices = indices[start_idx:end_idx]
+        batch_images = []
+        for idx in batch_indices:
+            file_name = file_list[idx]['file_name']
+            img = resize_image(os.path.join(file_path, file_name), output_shape)
+            batch_images.append(img)
+
+        batch_labels = np.load(heatmaps[iteration])['batch']
+        iteration += 1
+        yield (tf.stack(batch_images), tf.convert_to_tensor(batch_labels))
