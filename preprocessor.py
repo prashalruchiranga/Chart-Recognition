@@ -6,6 +6,7 @@ import tensorflow as tf
 import numpy as np
 from itertools import chain
 import os
+import random
 
 def clean(file):
     '''
@@ -42,11 +43,10 @@ def scale(annotation, input_shape, output_shape):
     c, d = output_shape
     sx = d / b
     sy = c / a
-    foo = lambda x, y: np.round(operator.mul(x, y)).astype(np.int32)
+    foo = lambda x, y: np.floor(operator.mul(x, y)).astype(np.int32)
     for dic in deep_copy:
         x0, y0, width, height = dic['bbox']
-        dic['bbox'] = list(map(foo, dic['bbox'], [sy, sx, sy, sx]))
-        
+        dic['bbox'] = list(map(foo, dic['bbox'], [sy, sx, sy, sx]))    
     return deep_copy
 
 
@@ -171,10 +171,44 @@ def label_generator(annotations, batch_size):
         yield tf.stack(batch_labels)
 
 
-def generator(file_list, heatmaps, batch_size, output_shape, file_path):
+def label_generator2(annotations, batch_size):
+    num_samples = len(annotations)
+    indices = np.arange(num_samples)
+    keypoints_tl = [annotation['bbox'][0:2] for annotation in annotations]
+    keypoints_br = [annotation['bbox'][2:4] for annotation in annotations]
+    for start_idx in range(0, num_samples, batch_size):
+        end_idx = min(start_idx + batch_size, num_samples)
+        batch_keypoints_tl = keypoints_tl[start_idx:end_idx]
+        batch_keypoints_br = keypoints_br[start_idx:end_idx]
+        batch_labels = tf.stack(list(map(make_heatmaps, batch_keypoints_tl, batch_keypoints_br)))
+        yield tf.stack(batch_labels)
+
+
+def divide_list_of_dicts(dict_list, chunk_size):
+    # Use list comprehension with slicing to create chunks of the specified size
+    return [dict_list[i:i + chunk_size] for i in range(0, len(dict_list), chunk_size)]
+
+
+def shuffle_lists_together(list1, list2):
+    if len(list1) != len(list2):
+        raise ValueError("Both lists must have the same length.")
+    combined = list(zip(list1, list2)) # Combine the lists into a list of tuples
+    random.shuffle(combined) # Shuffle the combined list
+    list1_shuffled, list2_shuffled = zip(*combined) # Unzip the combined list back into two lists
+    return list(list1_shuffled), list(list2_shuffled) # Convert the tuples back to lists and return
+
+
+def shuffle(file_list, heatmaps, chunk_size):
+    grouped_file_list = divide_list_of_dicts(file_list, chunk_size)
+    shuffled_grouped_file_list, shuffled_heatmaps = shuffle_lists_together(grouped_file_list, heatmaps)
+    return (list(chain(*shuffled_grouped_file_list)), shuffled_heatmaps)
+
+
+def data_generator(file_list, heatmaps, batch_size, output_shape, file_path):
     num_samples = len(file_list)
     indices = np.arange(num_samples)
     while True:
+        file_list, heatmaps = shuffle(file_list, heatmaps, chunk_size=batch_size)
         iteration = 0
         for start_idx in range(0, num_samples, batch_size):
             end_idx = min(start_idx + batch_size, num_samples)
@@ -183,26 +217,27 @@ def generator(file_list, heatmaps, batch_size, output_shape, file_path):
             for idx in batch_indices:
                 file_name = file_list[idx]['file_name']
                 img = resize_image(os.path.join(file_path, file_name), output_shape)
-                batch_images.append(img)
-
+                batch_images.append(img)  
             batch_labels = np.load(heatmaps[iteration])['batch']
             iteration += 1
-            yield (tf.stack(batch_images), tf.convert_to_tensor(batch_labels))
+            yield (tf.stack(batch_images), tf.convert_to_tensor(batch_labels)) 
 
 
-def validation_data_generator(file_list, heatmaps, batch_size, output_shape, file_path):
+def data_generator2(file_list, heatmaps, batch_size, output_shape, file_path):
     num_samples = len(file_list)
     indices = np.arange(num_samples)
-    iteration = 0
-    for start_idx in range(0, num_samples, batch_size):
-        end_idx = min(start_idx + batch_size, num_samples)
-        batch_indices = indices[start_idx:end_idx]
-        batch_images = []
-        for idx in batch_indices:
-            file_name = file_list[idx]['file_name']
-            img = resize_image(os.path.join(file_path, file_name), output_shape)
-            batch_images.append(img)
-
-        batch_labels = np.load(heatmaps[iteration])['batch']
-        iteration += 1
-        yield (tf.stack(batch_images), tf.convert_to_tensor(batch_labels))
+    while True:
+        #file_list, heatmaps = shuffle(file_list, heatmaps, chunk_size=batch_size)
+        iteration = 0
+        for start_idx in range(0, num_samples, batch_size):
+            end_idx = min(start_idx + batch_size, num_samples)
+            batch_indices = indices[start_idx:end_idx]
+            batch_images = []
+            for idx in batch_indices:
+                file_name = file_list[idx]['file_name']
+                img = resize_image(os.path.join(file_path, file_name), output_shape)
+                batch_images.append(img)  
+            batch_labels = np.sum(np.load(heatmaps[iteration])['batch'], axis=-1)
+            batch_labels = np.expand_dims(batch_labels, axis=-1)
+            iteration += 1
+            yield (tf.stack(batch_images), tf.convert_to_tensor(batch_labels)) 
