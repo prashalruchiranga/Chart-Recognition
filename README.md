@@ -1,3 +1,5 @@
+<h1>Visual Chart Recognition</h1>
+
 Visual Chart Recognition focuses on understanding chart images and extraction of data elements presented in the charts. The system mainly targets chart images extracted from annual financial reports published by the Central Bank of Sri Lanka. Chart images can be either bar charts, pie charts, line charts or any other type found in the financial reports.
 
 The Visual Chart recognition process involves four major steps: 
