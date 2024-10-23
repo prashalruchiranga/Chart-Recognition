@@ -130,18 +130,10 @@ def generate_2d_guassian(height, width, y0, x0, sigma=1, scale=12):
             count += 1
                 
     heatmap = tf.tensor_scatter_nd_update(heatmap, indices.stack(), updates.stack())
-
-    # unfortunately, the code below doesn't work because 
-    # tensorflow.python.framework.ops.EagerTensor' object does not support item assignment
-    # heatmap[heatmap_ymin:heatmap_ymax, heatmap_xmin:heatmap_xmax] = gaussian_patch[patch_ymin:patch_ymax,patch_xmin:patch_xmax]
-
     return heatmap
 
 
 def make_heatmaps(keypoint_tl, keypoint_br):
-    # Define SCALE as heatmap.shape[0] / image.shape[0] 
-    # SCALE = 64 / 256
-    #SCALE = tf.cast(0.25, dtype=tf.float32)
     tl = tf.cast(tf.math.round(keypoint_tl), dtype=tf.int32) 
     br = tf.cast(tf.math.round(keypoint_br), dtype=tf.int32) 
     count = len(tl) 
@@ -163,19 +155,6 @@ def label_generator(annotations, batch_size):
     indices = np.arange(num_samples)
     keypoints_tl = [list(chain(*[dic['bbox'][0:2] for dic in annotation])) for annotation in annotations]
     keypoints_br = [list(chain(*[dic['bbox'][2:4] for dic in annotation])) for annotation in annotations]
-    for start_idx in range(0, num_samples, batch_size):
-        end_idx = min(start_idx + batch_size, num_samples)
-        batch_keypoints_tl = keypoints_tl[start_idx:end_idx]
-        batch_keypoints_br = keypoints_br[start_idx:end_idx]
-        batch_labels = tf.stack(list(map(make_heatmaps, batch_keypoints_tl, batch_keypoints_br)))
-        yield tf.stack(batch_labels)
-
-
-def label_generator2(annotations, batch_size):
-    num_samples = len(annotations)
-    indices = np.arange(num_samples)
-    keypoints_tl = [annotation['bbox'][0:2] for annotation in annotations]
-    keypoints_br = [annotation['bbox'][2:4] for annotation in annotations]
     for start_idx in range(0, num_samples, batch_size):
         end_idx = min(start_idx + batch_size, num_samples)
         batch_keypoints_tl = keypoints_tl[start_idx:end_idx]
@@ -223,6 +202,19 @@ def data_generator(file_list, heatmaps, batch_size, output_shape, file_path):
             yield (tf.stack(batch_images), tf.convert_to_tensor(batch_labels)) 
 
 
+def label_generator2(annotations, batch_size):
+    num_samples = len(annotations)
+    indices = np.arange(num_samples)
+    keypoints_tl = [annotation['bbox'][0:2] for annotation in annotations]
+    keypoints_br = [annotation['bbox'][2:4] for annotation in annotations]
+    for start_idx in range(0, num_samples, batch_size):
+        end_idx = min(start_idx + batch_size, num_samples)
+        batch_keypoints_tl = keypoints_tl[start_idx:end_idx]
+        batch_keypoints_br = keypoints_br[start_idx:end_idx]
+        batch_labels = tf.stack(list(map(make_heatmaps, batch_keypoints_tl, batch_keypoints_br)))
+        yield tf.stack(batch_labels)
+
+
 def data_generator2(file_list, heatmaps, batch_size, output_shape, file_path):
     num_samples = len(file_list)
     indices = np.arange(num_samples)
@@ -241,3 +233,4 @@ def data_generator2(file_list, heatmaps, batch_size, output_shape, file_path):
             batch_labels = np.expand_dims(batch_labels, axis=-1)
             iteration += 1
             yield (tf.stack(batch_images), tf.convert_to_tensor(batch_labels)) 
+

@@ -3,4 +3,5 @@
 /env
 /DeepRuleDataset
 /CBSLDataset
+/SavedModels
 /__pycache__

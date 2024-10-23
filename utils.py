@@ -101,9 +101,10 @@ def extract_text(image, y_axis_line):
 
 def find_min_max(txt):
     # splits = re.split(r'\n\n|\n| ', txt)
+    txt = txt.replace(',', '')
     splits = txt.split('\n')
-    numbers_and_spaces = [re.sub(r'\D', '', item) for item in splits]
-    numbers_only = [int(num) for num in numbers_and_spaces if num.isdigit()]
+    #numbers_and_spaces = [re.sub(r'\D', '', item) for item in splits]
+    numbers_only = [int(num) for num in splits if num.isdigit()]
     return (min(numbers_only), max(numbers_only))
 
 
